@@ -16,9 +16,38 @@
 
 const datastore = require('./cloud/datastore');
 const authProvider = require('./cloud/auth-provider');
+const FHEM = require('./cloud/fhem').FHEM;
+let deviceList = [];
+
+connection={
+  name: "FHEM",
+  server: "scrappy",
+  port: "8083",
+  webname: "fhem",
+  filter: ""
+ 
+}
+var fhem = new FHEM(console.log, connection);
 
 function registerAgent(app) {
   console.log('smart-home-app registerAgent');
+
+
+console.log('FHEM QUEST', JSON.stringify(connection));
+fhem.on('LONGPOLL STARTED', function (fhem1) {
+  fhem.connect(function (fhem1, devices) {
+    //console.log('sync devices', JSON.stringify(devices));
+      for (var device of devices) {
+        console.log('FHEM RESP', device.name);
+       // console.log('FHEM RESP', JSON.stringify(device));
+       // this.addDevice(device, fhem);
+       device.id=device.name;
+       key=device.name;
+       deviceList[key]=device;
+       
+      }
+    }.bind(this, fhem))
+  }.bind(this, fhem));
 
   /**
    *
@@ -42,7 +71,7 @@ function registerAgent(app) {
     console.log('post /smarthome', reqdata);
 
     let authToken = authProvider.getAccessToken(request);
-    let uid = datastore.Auth.tokens[authToken].uid;
+    //let uid = datastore.Auth.tokens[authToken].uid;
 
     if (!reqdata.inputs) {
       response.status(401).set({
@@ -61,6 +90,7 @@ function registerAgent(app) {
       switch (intent) {
         case 'action.devices.SYNC':
           console.log('post /smarthome SYNC');
+          console.log('ciao sono io');
           /**
            * request:
            * {
@@ -104,12 +134,12 @@ function registerAgent(app) {
            *   }]
            * }
            */
-          query({
+          /*query({
             uid: uid,
             auth: authToken,
             requestId: reqdata.requestId,
             devices: reqdata.inputs[0].payload.devices,
-          }, response);
+          }, response);*/
 
           break;
         case 'action.devices.EXECUTE':
@@ -149,7 +179,7 @@ function registerAgent(app) {
            * }
            */
           exec({
-            uid: uid,
+            uid: "uid",
             auth: authToken,
             requestId: reqdata.requestId,
             commands: reqdata.inputs[0].payload.commands,
@@ -252,6 +282,9 @@ function registerAgent(app) {
    * }
    */
   function sync(data, response) {
+
+
+
     console.log('sync', JSON.stringify(data));
     let devices = app.smartHomePropertiesSync(data.uid);
     if (!devices) {
@@ -260,7 +293,7 @@ function registerAgent(app) {
       }).json({error: 'failed'});
       return;
     }
-    let deviceList = [];
+    /*
     Object.keys(devices).forEach(function(key) {
       if (devices.hasOwnProperty(key) && devices[key]) {
         console.log('Getting device information for id \'' + key + '\'');
@@ -268,15 +301,257 @@ function registerAgent(app) {
         device.id = key;
         deviceList.push(device);
       }
-    });
+    });*/
+
     let deviceProps = {
       requestId: data.requestId,
       payload: {
         agentUserId: data.uid,
-        devices: deviceList,
+        devices: [],
       },
     };
-    console.log('sync response', JSON.stringify(deviceProps));
+    for (let di in deviceList) {
+      const device = deviceList[di];
+
+      if (device.mappings.On
+          || device.mappings.Modes
+          || device.mappings.Toggles
+          || device.mappings.Volumme
+          || device.mappings.Brightness
+          || device.mappings.HSVBrightness
+          || device.mappings.Hue
+          || device.mappings.RGB
+          || device.mappings.Scene
+          || device.mappings.TargetPosition
+          || device.mappings.CurrentTemperature
+          || device.mappings.TargetTemperature
+          || device.mappings.StartStop
+          || device.mappings.Dock
+          || device.mappings.Locate) {
+          //console.log(device);
+
+          console.log("Start handling ", device.ghomeName);
+          
+          let d = {
+              id: device.uuid_base.replace(/[^\w_\-=#;:?@&]/g, '_'),
+              deviceInfo: {
+                  manufacturer: 'FHEM_' + device.type,
+                  model: (device.model ? device.model : '<unknown>')
+              },
+              name: {
+                  name: device.ghomeName
+              },
+              traits: [],
+              attributes: {},
+              customData: {device: device.device},
+          };
+          
+          d.willReportState = !device.mappings.Scene;
+
+          //roomHint
+          if (device.ghomeRoom)
+              d.roomHint = device.ghomeRoom;
+
+          //DEVICE TYPE
+          if (device.service_name) {
+              if (device.service_name === 'vacuum') {
+                  d.type = 'action.devices.types.VACUUM';
+              } else if (device.service_name === 'light' || device.service_name === 'blind') {
+                  d.type = 'action.devices.types.LIGHT';
+              } else if (device.service_name === 'switch' || device.service_name === 'contact') {
+                  d.type = 'action.devices.types.SWITCH';
+              } else if (device.service_name === 'outlet') {
+                  d.type = 'action.devices.types.OUTLET';
+              } else if (device.service_name === 'thermostat') {
+                  d.type = 'action.devices.types.THERMOSTAT';
+              } else if (device.service_name === 'coffeemaker') {
+                  d.type = 'action.devices.types.COFFEE_MAKER';
+              } else if (device.service_name === 'aircondition') {
+                  d.type = 'action.devices.types.AC_UNIT';
+              } else if (device.service_name === 'airpurifier') {
+                  d.type = 'action.devices.types.AIRPURIFIER';
+              } else if (device.service_name === 'camera') {
+                  d.type = 'action.devices.types.CAMERA';
+              } else if (device.service_name === 'dishwasher') {
+                  d.type = 'action.devices.types.DISHWASHER';
+              } else if (device.service_name === 'dryer') {
+                  d.type = 'action.devices.types.DRYER';
+              } else if (device.service_name === 'fan') {
+                  d.type = 'action.devices.types.FAN';
+              } else if (device.service_name === 'kettle') {
+                  d.type = 'action.devices.types.KETTLE';
+              } else if (device.service_name === 'oven') {
+                  d.type = 'action.devices.types.OVEN';
+              } else if (device.service_name === 'refrigerator') {
+                  d.type = 'action.devices.types.REFRIGERATOR';
+              } else if (device.service_name === 'scene') {
+                  d.type = 'action.devices.types.SCENE';
+              } else if (device.service_name === 'sprinkler') {
+                  d.type = 'action.devices.types.SPRINKLER';
+              } else if (device.service_name === 'washer') {
+                  d.type = 'action.devices.types.WASHER';
+              } else {
+                  log.error("genericDeviceType " + device.service_name + " not supported in ghome-fhem");
+                  continue;
+              }
+          } else {
+              if (device.mappings.TargetTemperature || device.mappings.CurrentTemperature) {
+                  d.type = 'action.devices.types.THERMOSTAT';
+              } else if (device.mappings.Brightness || device.mappings.Hue ||
+                         device.mappings.RGB || device.mappings.TargetPosition ||
+                         device.mappings.HSVBrightness) {
+                  d.type = 'action.devices.types.LIGHT';
+              } else if (device.mappings.Scene) {
+                  d.type = 'action.devices.types.SCENE';
+              } else {
+                  d.type = 'action.devices.types.SWITCH';
+              }
+          }
+
+          //TRAITS
+          if (device.mappings.On) {
+              d.traits.push("action.devices.traits.OnOff");
+          }
+
+          //Toggles
+          if (device.mappings.Toggles) {
+              d.traits.push("action.devices.traits.Toggles");
+              //Attributes
+              let availableTogglesList = [];
+              device.mappings.Toggles.forEach(function(toggle) {
+                availableTogglesList.push(toggle.toggle_attributes);
+              });
+              
+              d.attributes.availableToggles = availableTogglesList;
+          }
+
+          //Brightness
+          if (device.mappings.Brightness || device.mappings.TargetPosition || device.mappings.Volume) {
+              d.traits.push("action.devices.traits.Brightness");
+          }
+
+          //StartStop
+          if (device.mappings.StartStop) {
+              d.traits.push("action.devices.traits.StartStop");
+              //Attributes
+              d.attributes.pausable = true;
+          }
+          
+          //FanSpeed
+          if (device.mappings.FanSpeed) {
+              d.traits.push("action.devices.traits.FanSpeed");
+              //Attributes
+              d.attributes.availableFanSpeed = device.mappings.FanSpeed.speed_attributes;
+              d.attributes.reversible = device.mappings.FanSpeed.reversible;
+          }
+
+          //Dock
+          if (device.mappings.Dock) {
+              d.traits.push("action.devices.traits.Dock");
+          }
+          
+          //Locate
+          if (device.mappings.Locate) {
+              d.traits.push("action.devices.traits.Locator");
+          }
+
+          //Modes
+          if (device.mappings.Modes) {
+              d.traits.push("action.devices.traits.Modes");
+              //Attributes
+              addAttributesModes(device, d);
+          }
+
+          //TemperatureSetting
+          if (device.mappings.TargetTemperature) {
+              d.attributes = {
+                  //FIXME: do not define anything in server.js
+                  thermostatTemperatureUnit: 'C',
+                  availableThermostatModes: 'off,heat,on'
+              };
+              d.traits.push("action.devices.traits.TemperatureSetting");
+          } else if (device.mappings.CurrentTemperature) {
+              d.attributes = {
+                  //FIXME: do not define anything in server.js
+                  thermostatTemperatureUnit: 'C',
+                  availableThermostatModes: 'off'
+              };
+              d.traits.push("action.devices.traits.TemperatureSetting");
+          }
+
+          //ColorSetting / ColorTemperature
+          if (device.mappings.RGB) {
+              d.attributes.colorModel = 'rgb';
+              if (device.mappings.ColorTemperature) {
+                  d.attributes.colorTemperatureRange = {
+                      //FIXME get values from device mapping
+                      temperatureMinK: 2000,
+                      temperatureMaxK: 9000
+                  };
+              }
+              if (device.mappings.RGB.commandOnlyColorSetting)
+                  d.attributes.commandOnlyColorSetting = true;
+              d.traits.push("action.devices.traits.ColorSetting");
+          } else if (device.mappings.Hue) {
+              d.attributes.colorModel = 'hsv';
+              if (device.mappings.ColorTemperature) {
+                  d.attributes.colorTemperatureRange = {
+                      //FIXME get values from device mapping
+                      temperatureMinK: 2000,
+                      temperatureMaxK: 9000
+                  };
+              }
+              if (device.mappings.Hue.commandOnlyColorSetting)
+                  d.attributes.commandOnlyColorSetting = true;
+              d.traits.push("action.devices.traits.ColorSetting");
+          }
+
+          //Scene
+          if (device.mappings.Scene) {
+              d.traits.push("action.devices.traits.Scene");
+
+              //create separate device for each scene
+              if (Array.isArray(device.mappings.Scene)) {
+                  device.mappings.Scene.forEach(function(scene) {
+                      //Attributes
+                      if (scene.cmdOff) {
+                          d.attributes.sceneReversible = true;
+                      } else {
+                          d.attributes.sceneReversible = false;
+                      }
+                      let d2 = {
+                          id: device.uuid_base.replace(/[^\w_\-=#;:?@&]/g, '_') + '-' + scene.scenename,
+                          type: 'action.devices.types.SCENE',
+                          deviceInfo: {
+                              manufacturer: 'FHEM_' + device.type,
+                              model: (device.model ? device.model : '<unknown>')
+                          },
+                          name: {
+                              name: scene.scenename
+                          },
+                          traits: ['action.devices.traits.Scene'],
+                          attributes: {
+                              sceneReversible: false
+                          },
+                          customData: {
+                            device: device.device,
+                            scenename: scene.scenename
+                          }
+                      };
+                      console.log("End handling scene device: ", d2);
+                      deviceProps.payload.devices.push(d2);
+                  });
+              }
+          } else {
+            console.log("End handling device: ", d);
+            deviceProps.payload.devices.push(d);
+          }
+      }
+  }
+
+  
+
+    console.log('sync response asdf', JSON.stringify(deviceProps));
     response.status(200).json(deviceProps);
     return deviceProps;
   }
@@ -515,7 +790,95 @@ function registerAgent(app) {
       status: 'SUCCESS',
       states: {},
     };
-    let execDevice = app.smartHomeExec(uid, curDevice);
+    console.info('execDevice', JSON.stringify(device));
+    console.info('execCommand', JSON.stringify(command));
+
+    const REQUEST_SET_BRIGHTNESSABSOLUTE = "action.devices.commands.BrightnessAbsolute";
+    const REQUEST_SET_MODES = "action.devices.commands.SetModes";
+    const REQUEST_ON_OFF = "action.devices.commands.OnOff";
+    const REQUEST_SET_TARGET_TEMPERATURE = "action.devices.commands.ThermostatTemperatureSetpoint";
+    const REQUEST_SET_THERMOSTAT_MODE = "action.devices.commands.ThermostatSetMode";
+    const REQUEST_DOCK = "action.devices.commands.Dock";
+    const REQUEST_LOCATE = "action.devices.commands.Locate";
+    const REQUEST_STARTSTOP = "action.devices.commands.StartStop";
+    const REQUEST_PAUSEUNPAUSE = "action.devices.commands.PauseUnpause";
+    const REQUEST_FANSPEED = "action.devices.commands.SetFanSpeed";
+    const REQUEST_FANSPEEDREVERSE = "action.devices.commands.Reverse";
+    const REQUEST_COLORABSOLUTE = "action.devices.commands.ColorAbsolute";
+    const REQUEST_SET_TOGGLES = "action.devices.commands.SetToggles";
+    const REQUEST_ACTIVATE_SCENE = "action.devices.commands.ActivateScene";
+
+        let dev=deviceList[device.customData.device];
+    switch (command.command) {
+
+      case REQUEST_ON_OFF :
+        console.info('execCommand',device.customData.device, command.params.on ? 1 : 0);
+        //let dev=deviceList[device.customData.device];
+        dev.command( dev.mappings.On, command.params.on ? 1 : 0);
+
+          break;
+
+      case REQUEST_SET_BRIGHTNESSABSOLUTE :
+         dev.command( dev.mappings.On, command.params.brightness);;
+        // responses.push(...handleEXECUTEBrightnessAbsolute.bind(this)(cmd, exec.params.brightness));
+          break;
+
+      case REQUEST_SET_TARGET_TEMPERATURE:
+          responses.push(...handleEXECUTESetTargetTemperature.bind(this)(cmd, exec.params.thermostatTemperatureSetpoint));
+          break;
+
+      case REQUEST_SET_THERMOSTAT_MODE:
+          responses.push(...handleEXECUTESetThermostatMode.bind(this)(cmd, exec.params.thermostatMode));
+          break;
+
+      case REQUEST_DOCK:
+          responses.push(...handleEXECUTEDock.bind(this)(cmd));
+          break;
+          
+      case REQUEST_LOCATE:
+          responses.push(...handleEXECUTELocate.bind(this)(cmd));
+          break;
+          
+      case REQUEST_STARTSTOP:
+          responses.push(...handleEXECUTEStartStop.bind(this)(cmd, exec.params.start ? 1 : 0));
+          break;
+
+      case REQUEST_PAUSEUNPAUSE:
+          responses.push(...handleEXECUTEPauseUnpause.bind(this)(cmd, exec.params.pause ? 1 : 0));
+          break;
+
+      case REQUEST_FANSPEED:
+          responses.push(...handleEXECUTESetFanSpeed.bind(this)(cmd, exec.params.fanSpeed));
+          break;
+
+      case REQUEST_COLORABSOLUTE:
+          responses.push(...handleEXECUTESetColorAbsolute.bind(this)(cmd, exec.params.color));
+          break;
+
+      case REQUEST_SET_TOGGLES:
+          responses.push(...handleEXECUTESetToggles.bind(this)(cmd, exec.params.updateToggleSettings));
+          break;
+
+      case REQUEST_ACTIVATE_SCENE:
+          responses.push(...handleEXECUTEActivateScene.bind(this)(cmd, exec.params.deactivate));
+          break;
+
+      case REQUEST_FANSPEEDREVERSE:
+          //responses.push(...handleEXECUTEReverse.bind(this)(cmd, exec.params.reverse));
+          break;
+
+      //action.devices.traits.Modes: COMMANDS
+      case REQUEST_SET_MODES:
+          responses.push(...handleEXECUTESetModes.bind(this)(cmd, exec));
+          break;
+          
+      default:
+          console.log("Error", "Unsupported operation" + requestedName);
+          break;
+
+  }// switch
+
+   /* let execDevice = app.smartHomeExec(uid, curDevice);
     console.info('execDevice', JSON.stringify(execDevice[device.id]));
     // Check whether the device exists or whether
     // it exists and it is disconnected.
@@ -542,7 +905,7 @@ function registerAgent(app) {
           return {status: 'ERROR', errorCode: 'notSupported'};
         }
       }
-    });
+    });*/
     return {
       status: 'SUCCESS',
       states: execDevice.states,

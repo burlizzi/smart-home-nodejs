@@ -22,7 +22,7 @@ Config.smartHomeProviderGoogleClientId = 'ZxjqWpsYj3';
 // Client secret that Google will use
 Config.smartHomeProvideGoogleClientSecret = 'hIMH3uWlMVrqa7FAbKLBoNUMCyLCtv';
 // Client API Key generated on the console
-Config.smartHomeProviderApiKey = '<API_KEY>';
+Config.smartHomeProviderApiKey = 'AIzaSyBYAHy2dNVy4LqWbpDvA2U4omSkXRvP_lo';
 // Client service key to use for reporting state
 Config.jwt = require('./jwt-key.json');
 // Running server locally using ngrok

@@ -41,6 +41,7 @@
 
 const config = require('./config-provider');
 const Data = {};
+const FHEM = require('./fhem').FHEM;
 
 /**
  * Structure of Auth
@@ -303,6 +304,26 @@ Data.getProperties = function(uid, deviceIds = undefined) {
       }
     }
   }
+
+  connection={
+      name: "FHEM",
+      server: "scrappy",
+      port: "8083",
+      webname: "fhem",
+      filter: "room=Luci"
+     
+  }
+  console.log('FHEM QUEST', JSON.stringify(connection));
+  var fhem = new FHEM(console.log, connection);
+  fhem.on('LONGPOLL STARTED', function (fhem) {
+    fhem.connect(function (fhem, devices) {
+        for (var device of devices) {
+          console.log('FHEM RESP', JSON.stringify(device));
+         // this.addDevice(device, fhem);
+         
+        }
+    }.bind(this, fhem))
+}.bind(this, fhem));
 
   return properties;
 };

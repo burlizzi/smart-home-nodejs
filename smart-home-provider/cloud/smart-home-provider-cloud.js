@@ -23,6 +23,8 @@ const googleHa = require('../smart-home-app');
 const datastore = require('./datastore');
 const authProvider = require('./auth-provider');
 const config = require('./config-provider');
+const https = require('https');
+const fs = require('fs');
 
 // Check that the API key was changed from the default
 if (config.smartHomeProviderApiKey === '<API_KEY>') {
@@ -417,6 +419,7 @@ app.smartHomeQueryStates = (uid, deviceList) => {
 app.smartHomeExec = (uid, device) => {
   // console.log('smartHomeExec', device);
   datastore.execDevice(uid, device);
+  console.log('ciao sono io');
   let executedDevice = datastore.getStatus(uid, [device.id]);
   console.log('smartHomeExec executedDevice', JSON.stringify(executedDevice));
   return executedDevice;
@@ -568,7 +571,14 @@ app.reportState = (authToken, uid, device) => {
 
 const appPort = process.env.PORT || config.devPortSmartHome;
 
+//const server = app.listen(appPort, () => {
+const options = {
+  key: fs.readFileSync('/home/pi/smart-home-nodejs/smart-home-provider/key.pem'),
+  cert: fs.readFileSync('/home/pi/smart-home-nodejs/smart-home-provider/cert.pem')
+};
+//const server = https.createServer(options, app).listen(appPort, () => {
 const server = app.listen(appPort, () => {
+
   const host = server.address().address;
   const port = server.address().port;
 
