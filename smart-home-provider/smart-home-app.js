@@ -134,12 +134,12 @@ fhem.on('LONGPOLL STARTED', function (fhem1) {
            *   }]
            * }
            */
-          /*query({
-            uid: uid,
+          query({
+            uid: "uid",
             auth: authToken,
             requestId: reqdata.requestId,
             devices: reqdata.inputs[0].payload.devices,
-          }, response);*/
+          }, response);
 
           break;
         case 'action.devices.EXECUTE':
@@ -600,9 +600,17 @@ fhem.on('LONGPOLL STARTED', function (fhem1) {
    */
   function query(data, response) {
     console.log('query', JSON.stringify(data));
-    let deviceIds = getDeviceIds(data.devices);
+    //let deviceIds = getDeviceIds(data.devices);
 
-    let devices = app.smartHomeQueryStates(data.uid, deviceIds);
+    //let devices = app.smartHomeQueryStates(data.uid, deviceIds);
+    for (let k = 0; k < data.devices.length; k++) {
+      let device=deviceList[devices[k].customData.device];
+      console.log('query', JSON.stringify(device));
+      
+    }
+    
+
+
     if (!devices) {
       response.status(500).set({
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
