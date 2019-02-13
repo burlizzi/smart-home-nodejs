@@ -604,7 +604,7 @@ fhem.on('LONGPOLL STARTED', function (fhem1) {
 
     //let devices = app.smartHomeQueryStates(data.uid, deviceIds);
     for (let k = 0; k < data.devices.length; k++) {
-      let device=deviceList[devices[k].customData.device];
+      let device=deviceList[data.devices[k].customData.device];
       console.log('query', JSON.stringify(device));
       
     }
