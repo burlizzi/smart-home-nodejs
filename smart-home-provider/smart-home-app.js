@@ -614,7 +614,7 @@ fhem.on('LONGPOLL STARTED', function (fhem1) {
       };
       
       await device.query(mappings,function(ret, value){
-        devices[device.device]={"on":value=="on"}
+        devices[device.device]={"on":value=="on","online": true}
       });
       
       
