@@ -598,14 +598,26 @@ fhem.on('LONGPOLL STARTED', function (fhem1) {
    *   }
    * }
    */
-  function query(data, response) {
+  async function query(data, response) {
     console.log('query', JSON.stringify(data));
     //let deviceIds = getDeviceIds(data.devices);
 
+    devices= {}
     //let devices = app.smartHomeQueryStates(data.uid, deviceIds);
     for (let k = 0; k < data.devices.length; k++) {
       let device=deviceList[data.devices[k].customData.device];
-      console.log('query', JSON.stringify(device));
+      //console.log('query', JSON.stringify(device));
+      let mappings={
+        device:device.device,
+        reading:"state"
+
+      };
+      
+      await device.query(mappings,function(ret, value){
+        devices[device.device]={"on":value}
+      });
+      
+      
       
     }
     

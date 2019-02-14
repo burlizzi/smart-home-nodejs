@@ -1319,7 +1319,22 @@ FHEM_rgb2hsv(r, g, b) {
 }
 
 
-function
+
+
+// wrap a request in an promise
+function downloadPage(request, url) {
+    return new Promise((resolve, reject) => {
+        request(url, (error, response, body) => {
+            if (error) reject(error);
+            if (response.statusCode != 200) {
+                reject('Invalid status code <' + response.statusCode + '>');
+            }
+            resolve(body);
+        });
+    });
+}
+
+async function
 FHEM_execute(log, connection, cmd, callback) {
     if (FHEM_csrfToken[connection.base_url])
         cmd += '&fwcsrf=' + FHEM_csrfToken[connection.base_url];
@@ -1327,7 +1342,14 @@ FHEM_execute(log, connection, cmd, callback) {
     var url = encodeURI(connection.base_url + '?cmd=' + cmd);
     console.log('  executing: ' + url);
 
-    connection.request
+
+    var result = await downloadPage(connection.request,url);
+    result = result.replace(/[\r\n]/g, '');
+    if (callback)
+        callback(result);
+    return result;
+
+/*    await connection.request
         .get({url: url, gzip: true},
             function (err, response, result) {
                 if (!err && response.statusCode == 200) {
@@ -1343,16 +1365,16 @@ FHEM_execute(log, connection, cmd, callback) {
                 }
 
             })
-        .on('error', function (err) {
+        /*.on('error', function (err) {
             console.log('There was a problem connecting to FHEM (' + url + '):' + err);
-        });
+        });*/
 };
 
-FHEMDevice.prototype.execute = function (cmd, callback) {
-    FHEM_execute(this.log, this.connection, cmd, callback)
+FHEMDevice.prototype.execute = async  function (cmd, callback) {
+    await FHEM_execute(this.log, this.connection, cmd, callback)
 };
 
-FHEMDevice.prototype.query = function (mapping, callback) {
+FHEMDevice.prototype.query = async function (mapping, callback) {
     var device = this.device;
     var reading;
 
@@ -1405,7 +1427,7 @@ FHEMDevice.prototype.query = function (mapping, callback) {
 
     var cmd = '{ReadingsVal("' + device + '","' + reading + '","")}';
 
-    this.execute(cmd,
+    await this.execute(cmd,
         function (result) {
             var value = result.replace(/[\r\n]/g, '');
             console.log('  value: ' + value);
@@ -1426,7 +1448,7 @@ FHEMDevice.prototype.query = function (mapping, callback) {
 
             return value;
 
-        }.bind(this));
+        });
 }
 
 FHEMDevice.prototype.command = function (mapping, value, traitCommand) {
