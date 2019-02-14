@@ -307,7 +307,7 @@ Data.getProperties = function(uid, deviceIds = undefined) {
 
   connection={
       name: "FHEM",
-      server: "scrappy",
+      server: "127.0.0.1",
       port: "8083",
       webname: "fhem",
       filter: "room=Luci"

@@ -572,10 +572,10 @@ app.reportState = (authToken, uid, device) => {
 const appPort = process.env.PORT || config.devPortSmartHome;
 
 //const server = app.listen(appPort, () => {
-const options = {
+/*const options = {
   key: fs.readFileSync('/home/pi/smart-home-nodejs/smart-home-provider/key.pem'),
   cert: fs.readFileSync('/home/pi/smart-home-nodejs/smart-home-provider/cert.pem')
-};
+};*/
 //const server = https.createServer(options, app).listen(appPort, () => {
 const server = app.listen(appPort, () => {
 

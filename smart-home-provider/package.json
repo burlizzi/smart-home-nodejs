@@ -24,7 +24,9 @@
     "morgan": "^1.9.0",
     "ngrok": "^2.3.0",
     "node-fetch": "^1.6.3",
-    "reverse-tunnel-ssh": "^1.1.0"
+    "request": "^2.88.0",
+    "reverse-tunnel-ssh": "^1.1.0",
+    "sync-request": "^6.0.0"
   },
   "devDependencies": {
     "eslint": "^5.1.0",

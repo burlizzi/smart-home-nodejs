@@ -614,7 +614,15 @@ fhem.on('LONGPOLL STARTED', function (fhem1) {
       };
       
       await device.query(mappings,function(ret, value){
-        devices[device.device]={"on":value=="on","online": true}
+        devices[device.device]={
+          "on":value=="on",
+          "online": true,
+          "brightness": 80,
+                   "color": {
+                     "name": "cerulian",
+                     "spectrumRGB": 31655
+                   }
+        }
       });
       
       
